@@ -1,0 +1,46 @@
+{
+  "name": "mcp-postgres-server-auth",
+  "version": "1.0.0",
+  "description": "PostgreSQL MCP server with authentication for Claude web interface",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "start:unified": "node dist/unified-server.js",
+    "start:github": "node dist/github-oauth-server.js",
+    "dev": "tsx src/index.ts",
+    "dev:unified": "tsx src/unified-server.ts",
+    "dev:github": "tsx src/github-oauth-server.ts",
+    "dev:simple": "tsx src/simple-mcp.ts",
+    "lint": "eslint src/**/*.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server-postgres": "^0.6.0",
+    "@modelcontextprotocol/sdk": "^0.6.0",
+    "dotenv": "^16.3.1",
+    "jsonwebtoken": "^9.0.2",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "cookie-parser": "^1.4.6",
+    "pg": "^8.11.3",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
+    "@types/cookie-parser": "^1.4.6",
+    "@types/pg": "^8.10.9",
+    "typescript": "^5.3.0",
+    "tsx": "^4.6.0",
+    "eslint": "^8.55.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0"
+  },
+  "keywords": ["mcp", "postgresql", "database", "server", "authentication"],
+  "author": "",
+  "license": "MIT"
+}
