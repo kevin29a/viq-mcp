@@ -10,21 +10,17 @@ const app = express();
 
 // Database configuration - restrict access to specific tables
 const ALLOWED_TABLES = {
-  'table1': {
-    name: 'Table 1',
-    description: 'Description of what this table contains and its purpose'
+  'company_fact_table': {
+    name: 'Company Fact Table',
+    description: 'This contains metadata on a large number of companies that could be invested'
   },
-  'table2': {
-    name: 'Table 2', 
-    description: 'Description of what this table contains and its purpose'
-  }
   // Add your specific table names and descriptions here
 };
 
 // Database overview information
 const DATABASE_OVERVIEW = {
-  name: 'Your Database Name',
-  description: 'Brief description of what this database contains and its purpose',
+  name: 'Volition IQ',
+  description: 'This table contains a large amount of information about companies in the world with the intent of helping clients understand which companies could be useful for investment',
   tables: Object.keys(ALLOWED_TABLES).length,
   lastUpdated: new Date().toISOString(),
   notes: 'Any important notes about data access, privacy, or usage guidelines'
