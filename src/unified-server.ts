@@ -8,6 +8,15 @@ import { generateJWT, verifyJWT, AuthenticationError } from './auth.js';
 
 const app = express();
 
+// Access control - only these GitHub users can access the system
+const ALLOWED_USERS = process.env.ALLOWED_GITHUB_USERS 
+  ? process.env.ALLOWED_GITHUB_USERS.split(',').map(u => u.trim())
+  : [
+      'your-github-username',
+      'teammate1-github-username', 
+      'teammate2-github-username'
+    ];
+
 // Database configuration - restrict access to specific tables
 const ALLOWED_TABLES = {
   'company_fact_table': {
@@ -200,10 +209,19 @@ app.post('/oauth/token', async (req, res) => {
     
     const userData: GitHubUser = await userResponse.json();
     
+    // Check if user is authorized
+    if (!ALLOWED_USERS.includes(userData.login)) {
+      console.log('❌ Access denied for user:', userData.login);
+      return res.status(403).json({
+        error: 'access_denied',
+        error_description: `User '${userData.login}' is not authorized to access this system`
+      });
+    }
+    
     // Generate our JWT token
     const accessToken = generateJWT(userData.login);
     
-    console.log('✅ Token exchange successful for user:', userData.login);
+    console.log('✅ Token exchange successful for authorized user:', userData.login);
     
     // Return OAuth 2.0 compliant response
     res.json({
