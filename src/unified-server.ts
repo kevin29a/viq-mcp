@@ -286,22 +286,20 @@ async function handleListResources(req: any, res: any, id: any) {
     }
   ];
   
-  // Add allowed tables only
+  // Add all tables
   const client = await pool.connect();
   try {
-    const allowedTableNames = Object.keys(ALLOWED_TABLES);
     const result = await client.query(`
       SELECT table_name, table_type 
       FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-      AND table_name = ANY($1)
+      WHERE table_schema = 'public'
       ORDER BY table_name
-    `, [allowedTableNames]);
+    `);
     
     const tableResources = result.rows.map(row => ({
       uri: `postgres://table/${row.table_name}`,
       name: ALLOWED_TABLES[row.table_name]?.name || `Table: ${row.table_name}`,
-      description: ALLOWED_TABLES[row.table_name]?.description || `PostgreSQL table: ${row.table_name}`,
+      description: ALLOWED_TABLES[row.table_name]?.description || `PostgreSQL table: ${row.table_name} (${row.table_type})`,
       mimeType: 'application/json',
     }));
     
@@ -384,17 +382,17 @@ async function handleReadResource(req: any, res: any, id: any, params: any) {
   
   const tableName = uri.replace('postgres://table/', '');
   
-  // Check if table is allowed
-  if (!ALLOWED_TABLES[tableName]) {
-    return res.json({
-      jsonrpc: '2.0',
-      id,
-      error: {
-        code: -32602,
-        message: `Access to table '${tableName}' is not permitted`
-      }
-    });
-  }
+  // Allow all tables for now
+  // if (!ALLOWED_TABLES[tableName]) {
+  //   return res.json({
+  //     jsonrpc: '2.0',
+  //     id,
+  //     error: {
+  //       code: -32602,
+  //       message: `Access to table '${tableName}' is not permitted`
+  //     }
+  //   });
+  // }
   
   const client = await pool.connect();
   
@@ -528,17 +526,17 @@ async function handleCallTool(req: any, res: any, id: any, params: any) {
   } else if (name === 'describe_table') {
     const { table_name } = args;
     
-    // Check if table is allowed
-    if (!ALLOWED_TABLES[table_name]) {
-      return res.json({
-        jsonrpc: '2.0',
-        id,
-        error: {
-          code: -32602,
-          message: `Access to table '${table_name}' is not permitted`
-        }
-      });
-    }
+    // Allow all tables for now
+    // if (!ALLOWED_TABLES[table_name]) {
+    //   return res.json({
+    //     jsonrpc: '2.0',
+    //     id,
+    //     error: {
+    //       code: -32602,
+    //       message: `Access to table '${table_name}' is not permitted`
+    //     }
+    //   });
+    // }
     
     const client = await pool.connect();
     
