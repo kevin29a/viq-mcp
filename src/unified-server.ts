@@ -8,6 +8,28 @@ import { generateJWT, verifyJWT, AuthenticationError } from './auth.js';
 
 const app = express();
 
+// Database configuration - restrict access to specific tables
+const ALLOWED_TABLES = {
+  'table1': {
+    name: 'Table 1',
+    description: 'Description of what this table contains and its purpose'
+  },
+  'table2': {
+    name: 'Table 2', 
+    description: 'Description of what this table contains and its purpose'
+  }
+  // Add your specific table names and descriptions here
+};
+
+// Database overview information
+const DATABASE_OVERVIEW = {
+  name: 'Your Database Name',
+  description: 'Brief description of what this database contains and its purpose',
+  tables: Object.keys(ALLOWED_TABLES).length,
+  lastUpdated: new Date().toISOString(),
+  notes: 'Any important notes about data access, privacy, or usage guidelines'
+};
+
 // Database connection pool
 const pool = new Pool({
   host: config.DB_HOST,
@@ -17,7 +39,8 @@ const pool = new Pool({
   password: config.DB_PASSWORD,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 5000, // Increased for network latency
+  ssl: config.DB_HOST !== 'localhost' ? { rejectUnauthorized: false } : false, // SSL for remote databases
 });
 
 // Middleware
@@ -256,21 +279,37 @@ app.get('/auth/callback', async (req, res) => {
 // MCP Handler Functions
 async function handleListResources(req: any, res: any, id: any) {
   console.log('📚 Listing resources...');
+  
+  // Create database overview resource
+  const resources = [
+    {
+      uri: 'postgres://overview/database',
+      name: 'Database Overview',
+      description: 'General information about the database and available tables',
+      mimeType: 'application/json',
+    }
+  ];
+  
+  // Add allowed tables only
   const client = await pool.connect();
   try {
+    const allowedTableNames = Object.keys(ALLOWED_TABLES);
     const result = await client.query(`
       SELECT table_name, table_type 
       FROM information_schema.tables 
-      WHERE table_schema = 'public'
+      WHERE table_schema = 'public' 
+      AND table_name = ANY($1)
       ORDER BY table_name
-    `);
+    `, [allowedTableNames]);
     
-    const resources = result.rows.map(row => ({
+    const tableResources = result.rows.map(row => ({
       uri: `postgres://table/${row.table_name}`,
-      name: `Table: ${row.table_name}`,
-      description: `PostgreSQL table: ${row.table_name} (${row.table_type})`,
+      name: ALLOWED_TABLES[row.table_name]?.name || `Table: ${row.table_name}`,
+      description: ALLOWED_TABLES[row.table_name]?.description || `PostgreSQL table: ${row.table_name}`,
       mimeType: 'application/json',
     }));
+    
+    resources.push(...tableResources);
     
     res.json({
       jsonrpc: '2.0',
@@ -285,6 +324,57 @@ async function handleListResources(req: any, res: any, id: any) {
 async function handleReadResource(req: any, res: any, id: any, params: any) {
   const { uri } = params;
   
+  // Handle database overview
+  if (uri === 'postgres://overview/database') {
+    const client = await pool.connect();
+    try {
+      // Get some basic stats about allowed tables
+      const allowedTableNames = Object.keys(ALLOWED_TABLES);
+      const statsPromises = allowedTableNames.map(async (tableName) => {
+        try {
+          const countResult = await client.query(`SELECT COUNT(*) FROM "${tableName}"`);
+          return {
+            tableName,
+            name: ALLOWED_TABLES[tableName].name,
+            description: ALLOWED_TABLES[tableName].description,
+            rowCount: parseInt(countResult.rows[0].count)
+          };
+        } catch (error) {
+          return {
+            tableName,
+            name: ALLOWED_TABLES[tableName].name,
+            description: ALLOWED_TABLES[tableName].description,
+            rowCount: 'N/A',
+            error: 'Table not accessible'
+          };
+        }
+      });
+      
+      const tableStats = await Promise.all(statsPromises);
+      
+      const content = {
+        ...DATABASE_OVERVIEW,
+        availableTables: tableStats,
+        accessNotes: 'You can query these tables using the SQL query tool or view their detailed schemas.'
+      };
+      
+      return res.json({
+        jsonrpc: '2.0',
+        id,
+        result: {
+          contents: [{
+            uri,
+            mimeType: 'application/json',
+            text: JSON.stringify(content, null, 2)
+          }]
+        }
+      });
+    } finally {
+      client.release();
+    }
+  }
+  
+  // Handle table access - only allow specific tables
   if (!uri.startsWith('postgres://table/')) {
     return res.json({
       jsonrpc: '2.0',
@@ -297,6 +387,19 @@ async function handleReadResource(req: any, res: any, id: any, params: any) {
   }
   
   const tableName = uri.replace('postgres://table/', '');
+  
+  // Check if table is allowed
+  if (!ALLOWED_TABLES[tableName]) {
+    return res.json({
+      jsonrpc: '2.0',
+      id,
+      error: {
+        code: -32602,
+        message: `Access to table '${tableName}' is not permitted`
+      }
+    });
+  }
+  
   const client = await pool.connect();
   
   try {
@@ -428,6 +531,19 @@ async function handleCallTool(req: any, res: any, id: any, params: any) {
     }
   } else if (name === 'describe_table') {
     const { table_name } = args;
+    
+    // Check if table is allowed
+    if (!ALLOWED_TABLES[table_name]) {
+      return res.json({
+        jsonrpc: '2.0',
+        id,
+        error: {
+          code: -32602,
+          message: `Access to table '${table_name}' is not permitted`
+        }
+      });
+    }
+    
     const client = await pool.connect();
     
     try {
