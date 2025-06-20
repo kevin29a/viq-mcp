@@ -8,7 +8,7 @@ import { generateJWT, verifyJWT, AuthenticationError } from './auth.js';
 
 const app = express();
 
-// Database connection pool
+// Database connection pool (RDS PostgreSQL)
 const pool = new Pool({
   host: config.DB_HOST,
   port: config.DB_PORT,
@@ -17,7 +17,8 @@ const pool = new Pool({
   password: config.DB_PASSWORD,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 5000, // Increased for network latency
+  ssl: config.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false, // SSL for RDS
 });
 
 // Middleware
@@ -44,9 +45,9 @@ app.use((req, res, next) => {
 // GitHub OAuth configuration
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
-const GITHUB_REDIRECT_URI = process.env.GITHUB_REDIRECT_URI || 'http://localhost:3000/auth/callback';
-const NGROK_URL = process.env.NGROK_URL;
-const BASE_URL = NGROK_URL || `http://localhost:${config.SERVER_PORT}`;
+const PUBLIC_URL = process.env.PUBLIC_URL; // EC2 public URL
+const BASE_URL = PUBLIC_URL || `http://localhost:${config.SERVER_PORT}`;
+const GITHUB_REDIRECT_URI = process.env.GITHUB_REDIRECT_URI || `${BASE_URL}/auth/callback`;
 
 interface GitHubUser {
   id: number;

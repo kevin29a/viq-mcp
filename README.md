@@ -1,6 +1,6 @@
 # PostgreSQL MCP Server with Authentication
 
-A Model Context Protocol (MCP) server that provides authenticated access to PostgreSQL databases for Claude AI. Supports both Claude Desktop (stdio) and Claude Web (OAuth 2.0 with GitHub authentication).
+A Model Context Protocol (MCP) server that provides authenticated access to PostgreSQL databases for Claude AI. Supports Claude Web with GitHub OAuth 2.0 authentication and can be deployed on EC2 with RDS PostgreSQL.
 
 ## Features
 
@@ -8,17 +8,17 @@ A Model Context Protocol (MCP) server that provides authenticated access to Post
 - 🗄️ **PostgreSQL Integration** - Full database access with schema discovery
 - 🛠️ **SQL Query Tool** - Execute custom SQL queries
 - 📊 **Resource Discovery** - Browse database tables and schemas
-- 🔄 **Multiple Interfaces** - Works with both Claude Desktop and Claude Web
-- 🚀 **Easy Setup** - Docker-based PostgreSQL with sample data
+- ☁️ **Production Ready** - Supports EC2 deployment with RDS PostgreSQL
+- 🚀 **Easy Setup** - Docker-based PostgreSQL for development
 
 ## Quick Start
 
 ### 1. Prerequisites
 
 - Node.js 18+
-- Docker and Docker Compose
-- ngrok (for Claude Web integration)
+- PostgreSQL database (local Docker or AWS RDS)
 - GitHub OAuth App (for Claude Web authentication)
+- EC2 instance (for production deployment)
 
 ### 2. Installation
 
@@ -28,17 +28,7 @@ cd mcp-server
 npm install
 ```
 
-### 3. Database Setup
-
-```bash
-# Start PostgreSQL with sample data
-docker-compose up -d
-
-# Verify database is running
-docker-compose ps
-```
-
-### 4. Configuration
+### 3. Configuration
 
 Copy the example environment file and configure:
 
@@ -49,40 +39,60 @@ cp .env.example .env
 Edit `.env` with your settings:
 
 ```bash
-# Database (already configured for Docker setup)
-DB_HOST=localhost
+# Database Configuration (RDS PostgreSQL)
+DB_HOST=your-rds-endpoint.region.rds.amazonaws.com
 DB_PORT=5432
-DB_NAME=mcp_database
-DB_USER=mcp_user
-DB_PASSWORD=mcp_password
+DB_NAME=your_database_name
+DB_USER=your_db_username
+DB_PASSWORD=your_db_password
+
+# Server Configuration (EC2)
+SERVER_PORT=3000
+SERVER_HOST=0.0.0.0
+PUBLIC_URL=http://44.200.16.187:3000
 
 # Authentication
-JWT_SECRET=your-super-secret-jwt-key-at-least-32-characters-long
-API_KEY=your-api-key-for-development
+JWT_SECRET=your-jwt-secret-at-least-32-characters-long
 
 # GitHub OAuth (for Claude Web)
-GITHUB_CLIENT_ID=your_github_client_id
-GITHUB_CLIENT_SECRET=your_github_client_secret
+GITHUB_CLIENT_ID=your_github_oauth_app_client_id
+GITHUB_CLIENT_SECRET=your_github_oauth_app_client_secret
+GITHUB_REDIRECT_URI=http://44.200.16.187:3000/auth/callback
+
+# Environment
+NODE_ENV=production
 ```
 
-### 5. Usage
+### 4. Development Setup (Optional)
 
-#### For Claude Desktop (stdio mode)
+For local development with Docker:
+
 ```bash
+# Start PostgreSQL with sample data
+docker-compose up -d
+
+# Start development server
 npm run dev
 ```
 
-#### For Claude Web (with GitHub OAuth)
-```bash
-# Start the authenticated server
-npm run dev:unified
+### 5. Production Deployment
 
-# In another terminal, expose via ngrok
-ngrok http 3000
+#### On EC2:
+```bash
+# Build the application
+npm run build
+
+# Start with PM2 (recommended)
+npm run pm2:start
+
+# Or start directly
+npm start
 ```
 
-Then in Claude Web settings:
-- **Server URL**: `https://your-ngrok-url.ngrok-free.app`
+### 6. Usage
+
+Configure Claude Web:
+- **Server URL**: `http://44.200.16.187:3000`
 - **Client ID**: `your_github_client_id`
 
 ## Architecture

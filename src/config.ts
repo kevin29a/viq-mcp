@@ -1,16 +1,16 @@
 import { z } from 'zod';
 
 const configSchema = z.object({
-  // Database configuration
+  // Database configuration (RDS PostgreSQL)
   DB_HOST: z.string().default('localhost'),
   DB_PORT: z.coerce.number().default(5432),
   DB_NAME: z.string().default('testdb'),
   DB_USER: z.string().default('testuser'),
   DB_PASSWORD: z.string().default('testpass'),
   
-  // Server configuration
+  // Server configuration (EC2)
   SERVER_PORT: z.coerce.number().default(3000),
-  SERVER_HOST: z.string().default('localhost'),
+  SERVER_HOST: z.string().default('0.0.0.0'), // Listen on all interfaces for EC2
   
   // Authentication configuration
   JWT_SECRET: z.string().min(32),
